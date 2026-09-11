@@ -8,36 +8,36 @@ from app.schemas.product import PricingRequest, ProductBase
 
 def test_product_base_creation():
     product = ProductBase(
-        name="Camiseta Tech",
         sku="CAM-001",
-        base_price=Decimal("100.00"),
-        category="Vestuário",
+        name="Camiseta Tech",
+        cost_price=Decimal("100.00"),
     )
     assert product.sku == "CAM-001"
-    assert product.base_price == Decimal("100.00")
+    assert product.cost_price == Decimal("100.00")
 
 
 def test_pricing_request_validation():
     product = ProductBase(
-        name="Notebook",
         sku="NOTE-001",
-        base_price=Decimal("3500.00"),
-        category="Eletrônicos",
+        name="Notebook",
+        cost_price=Decimal("2500.00"),
     )
     request = PricingRequest(
         product=product,
-        discount_percentage=Decimal("10.0"),
-        tax_percentage=Decimal("5.0"),
+        desired_margin=Decimal("0.20"),
+        min_margin=Decimal("0.10"),
+        marketplace_tax=Decimal("0.12"),
+        competitor_prices=[Decimal("3000.00"), Decimal("3200.00")],
     )
-    assert request.discount_percentage == Decimal("10.0")
-    assert request.tax_percentage == Decimal("5.0")
+    assert request.desired_margin == Decimal("0.20")
+    assert request.marketplace_tax == Decimal("0.12")
+    assert len(request.competitor_prices) == 2
 
 
 def test_product_invalid_price():
     with pytest.raises(ValidationError):
         ProductBase(
-            name="Produto Inválido",
             sku="INV-001",
-            base_price=Decimal("-10.00"),  # Preço não pode ser <=
-            category="Geral",
+            name="Produto Inválido",
+            cost_price=Decimal("-10.00"),  # Custo deve ser > 0
         )
