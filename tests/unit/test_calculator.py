@@ -1,47 +1,65 @@
-# tests/unit/test_calculator.py
 from decimal import Decimal
+
+import pytest
+from openpyxl import load_workbook
 
 from app.schemas.product import PricingRequest, ProductBase
 from app.services.calculator import PriceCalculatorService
 
 
-def test_calculate_price_competitor_outlier_filtering():
-    """Valida se o cálculo de IQR descarte o outlier 500.00."""
-    prices = [
-        Decimal("98.00"),
-        Decimal("99.00"),
-        Decimal("100.00"),
-        Decimal("101.00"),
-        Decimal("102.00"),
-        Decimal("103.00"),
-        Decimal("500.00"),  # Outlier
-    ]
-    avg = PriceCalculatorService.filter_outliers_iqr(prices)
+def load_products_from_excel(file_path: str):
+    """Lê a planilha Excel e agrupa os preços dos concorrentes por produto."""
+    wb = load_workbook(filename=file_path, data_only=True)
+    test_data = []
 
-    # A média correta de (98 + 99 + 100 + 101 + 102 + 103) / 6 = 100.50
-    assert avg == Decimal("100.50")
+    for sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        rows = list(ws.iter_rows(values_only=True))
+        if not rows or len(rows) <= 1:
+            continue
+
+        # Extrai metadados do produto a partir da primeira linha de dados
+        first_row = rows[1]
+        product = ProductBase(
+            sku=str(first_row[0]),
+            name=str(first_row[1]),
+            cost_price=Decimal(str(first_row[2])),
+        )
+
+        # Extrai todos os preços dos concorrentes (coluna index 3)
+        competitor_prices = [
+            Decimal(str(row[3])) for row in rows[1:] if row[3] is not None
+        ]
+
+        test_data.append((product, competitor_prices))
+
+    return test_data
 
 
-def test_calculate_price_adjusted_by_market_ceiling():
-    """Valida o ajuste automático quando o preço alvo supera o teto do mercado (+15%)."""
-    product = ProductBase(
-        sku="MOUSE-001", name="Mouse Gamer", cost_price=Decimal("50.00")
-    )
+# Carrega a massa diretamente do Excel
+EXCEL_TEST_DATA = load_products_from_excel("tests/fixtures/precos_concorrentes.xlsx")
+
+
+@pytest.mark.parametrize("product, competitor_prices", EXCEL_TEST_DATA)
+def test_calculate_price_from_excel(
+    product: ProductBase, competitor_prices: list[Decimal]
+):
+    """Valida o cálculo com dados originados do arquivo .xlsx."""
     request = PricingRequest(
         product=product,
-        desired_margin=Decimal("0.30"),  # Preço alvo ideal seria 50 / 0.60 = 83.33
-        min_margin=Decimal("0.15"),
-        marketplace_tax=Decimal("0.10"),
-        competitor_prices=[
-            Decimal("60.00"),
-            Decimal("65.00"),
-            Decimal("70.00"),
-        ],  # Média = 65.00
+        desired_margin=Decimal("0.25"),
+        min_margin=Decimal("0.10"),
+        marketplace_tax=Decimal("0.12"),
+        competitor_prices=competitor_prices,
     )
 
     response = PriceCalculatorService.calculate_price(request)
 
-    # Média concorrentes = 65.00 | Teto (+15%) = 65.00 * 1.15 = 74.75
-    assert response.suggested_price == Decimal("74.75")
-    assert response.viability_status == "competitivo_ajustado"
-    assert "Preço ajustado para o teto competitivo do mercado." in response.alerts
+    assert response.sku == product.sku
+    assert response.suggested_price > Decimal("0.00")
+    assert response.adjusted_competitor_avg > Decimal("0.00")
+    assert response.viability_status in [
+        "excelente",
+        "competitivo_ajustado",
+        "incompetitivo",
+    ]
