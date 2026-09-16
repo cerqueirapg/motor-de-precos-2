@@ -6,18 +6,11 @@ from app.services.calculator import PriceCalculatorService
 router = APIRouter(prefix="/api/v1/pricing", tags=["Pricing"])
 
 
-@router.post(
-    "/calculate",
-    response_model=PricingResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Calcula o preço sugerido do produto",
-    description="Aplica regras de margem desejada, margem mínima, taxas de marketplace e filtro estatístico (IQR) sobre a concorrência.",
-)
-def calculate_price(request: PricingRequest) -> PricingResponse:
+@router.post("/calculate", response_model=PricingResponse)
+def calculate_price(payload: PricingRequest):
     try:
-        return PriceCalculatorService.calculate_price(request)
-    except ValueError as ve:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(ve),
-        )
+        return PriceCalculatorService.calculate_price(
+            payload
+        )  # <-- Passa a sessão do DB para o serviço
+    except ValueError as err:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(err))

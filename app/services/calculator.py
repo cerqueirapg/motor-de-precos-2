@@ -1,4 +1,3 @@
-import statistics
 from decimal import ROUND_HALF_UP, Decimal
 
 from app.schemas.product import PricingRequest, PricingResponse
@@ -22,6 +21,22 @@ class PriceCalculatorService:
         return value.quantize(cls.PRECISION_PERCENT, rounding=ROUND_HALF_UP)
 
     @classmethod
+    def _get_quantile(cls, sorted_data: list[Decimal], q: Decimal) -> Decimal:
+        """Calcula o quartil q (entre 0 e 1) usando interpolação linear em Decimal puro."""
+        n = len(sorted_data)
+        if n == 1:
+            return sorted_data[0]
+        index = Decimal(str(n - 1)) * q
+        lower_idx = int(index)
+        upper_idx = lower_idx + 1 if lower_idx + 1 < n else lower_idx
+        fraction = index - Decimal(str(lower_idx))
+
+        return (
+            sorted_data[lower_idx]
+            + (sorted_data[upper_idx] - sorted_data[lower_idx]) * fraction
+        )
+
+    @classmethod
     def filter_outliers_iqr(cls, prices: list[Decimal]) -> Decimal:
         """Filtra discrepâncias de mercado via Intervalo Interquartil (IQR)."""
         if not prices:
@@ -33,12 +48,9 @@ class PriceCalculatorService:
         if n < 4:
             return cls._round_money(sum(prices_sorted) / Decimal(str(n)))
 
-        # Conversão temporária para quantiles do módulo statistics
-        float_prices = [float(p) for p in prices_sorted]
-        q1_f, _, q3_f = statistics.quantiles(float_prices, n=4)
-
-        q1 = Decimal(str(q1_f))
-        q3 = Decimal(str(q3_f))
+        # Cálculo do 1º (25%) e 3º (75%) quartil diretamente em Decimal
+        q1 = cls._get_quantile(prices_sorted, Decimal("0.25"))
+        q3 = cls._get_quantile(prices_sorted, Decimal("0.75"))
         iqr = q3 - q1
 
         lower_bound = q1 - (Decimal("1.5") * iqr)
