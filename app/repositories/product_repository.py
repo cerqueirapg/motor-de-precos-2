@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,16 +12,23 @@ class ProductRepository:
 
     async def save_calculation(
         self,
-        tenant_id: str,
-        product_id: str,
+        tenant_id: uuid.UUID | str,
+        product_id: uuid.UUID | str,
         price: Decimal,
         margin: Decimal,
         status: str,
         applied_iqr: bool,
     ) -> PricingHistoryModel:
+        tenant_uuid = (
+            uuid.UUID(str(tenant_id)) if isinstance(tenant_id, str) else tenant_id
+        )
+        product_uuid = (
+            uuid.UUID(str(product_id)) if isinstance(product_id, str) else product_id
+        )
+
         history = PricingHistoryModel(
-            tenant_id=tenant_id,
-            product_id=product_id,
+            tenant_id=tenant_uuid,
+            product_id=product_uuid,
             calculated_price=price,
             effective_margin=margin,
             status=status,

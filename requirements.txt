@@ -9,3 +9,4 @@ asyncpg>=0.29.0      # Driver assíncrono para PostgreSQL
 pydantic-settings>=2.0.0
 aiosqlite>=0.22.0      # Driver assíncrono para SQLite
 openpyxl>=3.1.0
+pytest-asyncio>=0.21.0

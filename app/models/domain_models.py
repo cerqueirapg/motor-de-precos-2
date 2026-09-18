@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Numeric, String
@@ -18,7 +18,7 @@ class TenantModel(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
 
     products: Mapped[list["ProductModel"]] = relationship(

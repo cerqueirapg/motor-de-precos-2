@@ -1,0 +1,24 @@
+# Cache e ficheiros compilados do Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Ambientes virtuais
+venv/
+.venv/
+env/
+
+# Ficheiros de configuração local e variáveis de ambiente
+.env
+.env.local
+
+# Bases de dados locais e temporárias de migração/teste
+*.db
+*.sqlite
+*.sqlite3
+test_migration.db
+
+# Histórico e configurações do IDE/Editor
+.vscode/
+.idea/
