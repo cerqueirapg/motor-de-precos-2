@@ -1,40 +1,54 @@
-import uuid
 from decimal import Decimal
+from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models.domain_models import PricingHistoryModel
+from app.models.domain_models import PricingHistory, Product
+from app.repositories.excel_repository import ExcelRepository
 
 
 class ProductRepository:
-    def __init__(self, db: AsyncSession):
-        self.db = db
+    def __init__(self, excel_repo: ExcelRepository):
+        self.excel_repo = excel_repo
 
-    async def save_calculation(
+    def get_by_sku(self, sku: str) -> Product | None:
+        """Busca os dados do produto na planilha Excel pelo SKU."""
+        product_data = self.excel_repo.get_product_by_sku(sku)
+        if not product_data:
+            return None
+        return Product(
+            sku=product_data["sku"],
+            name=product_data.get("nome"),
+            cost_price=Decimal(str(product_data["custo_base"])),
+            min_margin=Decimal(str(product_data["margem_minima"])),
+        )
+
+    def save_calculation(
         self,
-        tenant_id: uuid.UUID | str,
-        product_id: uuid.UUID | str,
+        sku: str,
         price: Decimal,
         margin: Decimal,
         status: str,
         applied_iqr: bool,
-    ) -> PricingHistoryModel:
-        tenant_uuid = (
-            uuid.UUID(str(tenant_id)) if isinstance(tenant_id, str) else tenant_id
-        )
-        product_uuid = (
-            uuid.UUID(str(product_id)) if isinstance(product_id, str) else product_id
-        )
-
-        history = PricingHistoryModel(
-            tenant_id=tenant_uuid,
-            product_id=product_uuid,
+    ) -> PricingHistory:
+        """Cria e retorna o registro de cálculo efetuado."""
+        history = PricingHistory(
+            sku=sku,
             calculated_price=price,
             effective_margin=margin,
             status=status,
             applied_iqr_filter=applied_iqr,
         )
-        self.db.add(history)
-        await self.db.commit()
-        await self.db.refresh(history)
+        # Opcional: Persistir o resultado em uma nova aba ou planilha de saída
+        # self.excel_repo.save_pricing_history(history)
         return history
+
+    def bulk_create(self, products_data: list[dict[str, Any]]) -> int:
+        """Processa e valida em lote os produtos vindos da planilha."""
+        if not products_data:
+            return 0
+
+        count = 0
+        for data in products_data:
+            if "sku" in data and "custo_base" in data:
+                count += 1
+
+        return count

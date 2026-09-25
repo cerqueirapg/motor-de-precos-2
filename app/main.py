@@ -1,12 +1,15 @@
 from fastapi import FastAPI
 
-from app.routers import pricing
+from app.routers import pricing, upload
 
 app = FastAPI(
     title="Motor de Preços 2.0",
     version="0,.1.0",
     description="API de precificação dinâmica com inteligência de mercado anãlise de margem e precisão financeira.",
 )
+
+
+app.include_router(upload.router)
 
 app.include_router(pricing.router)
 

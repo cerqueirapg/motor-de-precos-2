@@ -1,6 +1,9 @@
 import time
+from importlib import import_module
 
-from app.repositories.excel_repository import ExcelPricingRepository
+ExcelPricingRepository = import_module(
+    "app.repositories.excel_repository"
+).ExcelPricingRepository
 from app.services.calculator import PriceCalculatorService
 
 
