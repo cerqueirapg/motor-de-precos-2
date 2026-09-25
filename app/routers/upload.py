@@ -14,7 +14,7 @@ from app.repositories.product_repository import ProductRepository
 from app.schemas.product import PricingRequest, ProductBase
 from app.services.calculator import PriceCalculatorService
 
-router = APIRouter(tags=["Upload"])
+router = APIRouter(prefix="/api/v1/upload", tags=["Upload"])
 
 TEMPLATE_PATH = os.path.join("scripts", "motor_precos_template.xlsx")
 

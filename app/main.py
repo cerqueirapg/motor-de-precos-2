@@ -21,11 +21,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 1. Registra os roteadores da API PRIMEIRO (Garante prioridade sobre os estáticos)
-app.include_router(pricing.router, prefix="/api/pricing", tags=["Pricing"])
-app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
+app.include_router(pricing.router)
+app.include_router(upload.router)
 
-# 2. Servir a página principal do Frontend explicitamente na raiz
 frontend_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "frontend")
 )
@@ -36,9 +34,8 @@ def serve_index():
     index_file = os.path.join(frontend_path, "index.html")
     if os.path.exists(index_file):
         return FileResponse(index_file)
-    return {"message": "API do Motor de Preços 2.0 ativa. Frontend não encontrado."}
+    return {"message": "API do Motor de Preços 2.0 ativa."}
 
 
-# 3. Monta os arquivos estáticos (CSS, JS) após a definição das rotas de API
 if os.path.exists(frontend_path):
     app.mount("/", StaticFiles(directory=frontend_path), name="frontend")

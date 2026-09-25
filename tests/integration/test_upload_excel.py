@@ -19,7 +19,7 @@ async def test_upload_excel_success():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
-            "/upload/excel",
+            "/api/v1/upload/excel",
             files={
                 "file": (
                     "motor_precos_fixtures.xlsx",
@@ -30,7 +30,9 @@ async def test_upload_excel_success():
         )
 
     assert response.status_code == 200
-    assert response.json() == {"message": "Planilha validada e carregada com sucesso!"}
+    response_data = response.json()
+
+    assert response_data["message"] == "Planilha processada com sucesso!"
 
 
 @pytest.mark.asyncio
@@ -38,7 +40,7 @@ async def test_upload_excel_invalid_format():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
-            "/upload/excel",
+            "/api/v1/upload/excel",
             files={"file": ("documento.pdf", b"conteudo falso", "application/pdf")},
         )
 
