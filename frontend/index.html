@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motor de Preços 2.0 - Painel Comparativo</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-chart-line"></i> Motor de Preços & Comparador Competitivo</h1>
+            <p>Envie sua planilha para obter análises automáticas de margem e precificação de mercado.</p>
+        </header>
+
+        <section class="actions-bar">
+            <!-- Botão de Download Modelo -->
+            <a href="/api/upload/download-template" download class="btn-download">
+                <i class="fas fa-file-excel"></i> Baixar Planilha Modelo (.xlsx)
+            </a>
+
+            <!-- Form de Upload -->
+            <form id="uploadForm" class="upload-form">
+                <input type="file" id="fileInput" accept=".xlsx, .xls" required>
+                <button type="submit" class="btn-primary" id="btnUpload">
+                    <i class="fas fa-upload"></i> Processar Planilha
+                </button>
+            </form>
+        </section>
+
+        <!-- Spinner de Carregamento -->
+        <div id="loading" class="loading hidden">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p>Calculando margens e preços competitivos...</p>
+        </div>
+
+        <!-- Tabela Comparativa -->
+        <section id="resultsSection" class="results-section hidden">
+            <h2>Relatório Comparativo de Mercado</h2>
+            <div class="table-responsive">
+                <table id="comparisonTable">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Produto</th>
+                            <th>Seu Custo Base</th>
+                            <th>Menor Concorrente</th>
+                            <th>Preço Sugerido (Motor)</th>
+                            <th>Status Competitivo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Linhas geradas via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
