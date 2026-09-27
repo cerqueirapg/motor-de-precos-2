@@ -37,17 +37,30 @@
 
         <!-- Tabela Comparativa -->
         <section id="resultsSection" class="results-section hidden">
-            <h2>Relatório Comparativo de Mercado</h2>
+            <div class="results-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Relatório Comparativo de Mercado</h2>
+                
+                <!-- Botões de Exportação (Exibidos ao processar) -->
+                <div class="export-buttons" style="display: flex; gap: 10px;">
+                    <button id="btnExportDocx" class="btn btn-secondary" style="background-color: #2b579a; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-file-word"></i> Exportar (.docx)
+                    </button>
+                    <button id="btnExportXlsx" class="btn btn-success" style="background-color: #1d6f42; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-file-excel"></i> Exportar (.xlsx)
+                    </button>
+                </div>
+            </div>
+
             <div class="table-responsive">
                 <table id="comparisonTable">
                     <thead>
                         <tr>
                             <th>SKU</th>
-                            <th>Produto</th>
-                            <th>Seu Custo Base</th>
-                            <th>Menor Concorrente</th>
-                            <th>Preço Sugerido (Motor)</th>
-                            <th>Status Competitivo</th>
+                            <th>PRODUTO</th>
+                            <th>SEU CUSTO BASE</th>
+                            <th>MENOR CONCORRENTE</th>
+                            <th>PREÇO SUGERIDO (MOTOR)</th>
+                            <th>STATUS COMPETITIVO</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">

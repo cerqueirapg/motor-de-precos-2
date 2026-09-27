@@ -7,7 +7,10 @@ from typing import Annotated
 
 import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
+
+from app.services.docx_generator import generate_pricing_docx_report
+from app.services.excel_generator import generate_pricing_excel_report
 
 # Ajustado o prefixo para coincidir com as chamadas do frontend
 router = APIRouter(prefix="/api/upload", tags=["Upload"])
@@ -163,3 +166,33 @@ async def upload_excel(file: Annotated[UploadFile, File()]):
     finally:
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
+
+
+# Endpoint para exportação .docx
+@router.post("/export-docx")
+async def export_docx(relatorio: list[dict]):
+    """Exporta o relatório consolidado em formato Word (.docx)."""
+    if not relatorio:
+        raise HTTPException(status_code=400, detail="Sem dados para exportar.")
+
+    file_stream = generate_pricing_docx_report(relatorio)
+    return StreamingResponse(
+        file_stream,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": "attachment; filename=Relatorio_Precos.docx"},
+    )
+
+
+# Endpoint para exportação .xlsx
+@router.post("/export-xlsx")
+async def export_xlsx(relatorio: list[dict]):
+    """Exporta o relatório consolidado em formato Excel (.xlsx)."""
+    if not relatorio:
+        raise HTTPException(status_code=400, detail="Sem dados para exportar.")
+
+    file_stream = generate_pricing_excel_report(relatorio)
+    return StreamingResponse(
+        file_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=Relatorio_Precos.xlsx"},
+    )
