@@ -19,7 +19,7 @@ async def test_upload_excel_success():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
-            "/api/v1/upload/excel",
+            "/api/upload/excel",
             files={
                 "file": (
                     "motor_precos_fixtures.xlsx",
@@ -40,7 +40,7 @@ async def test_upload_excel_invalid_format():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
-            "/api/v1/upload/excel",
+            "/api/upload/excel",
             files={"file": ("documento.pdf", b"conteudo falso", "application/pdf")},
         )
 

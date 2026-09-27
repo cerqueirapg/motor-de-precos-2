@@ -1,62 +1,44 @@
-import random
-
-from openpyxl import Workbook
-
-random.seed(42)
-
-# Cria a pasta de trabalho Excel
-wb = Workbook()
-# Remove a aba padrão inicial
 import os
 
-os.makedirs("tests/fixtures", exist_ok=True)
+import pandas as pd
 
-products = [
-    {
-        "sku": "PROD-001",
-        "name": "Teclado Mecânico RGB",
-        "cost": 120.00,
-        "base_price": 250.00,
-    },
-    {
-        "sku": "PROD-002",
-        "name": "Mouse Gamer Wireless",
-        "cost": 80.00,
-        "base_price": 180.00,
-    },
-    {
-        "sku": "PROD-003",
-        "name": "Monitor UltraWide 29",
-        "cost": 750.00,
-        "base_price": 1200.00,
-    },
-    {
-        "sku": "PROD-004",
-        "name": "Cadeira Ergonômica",
-        "cost": 450.00,
-        "base_price": 890.00,
-    },
-    {
-        "sku": "PROD-005",
-        "name": "Headset 7.1 Surround",
-        "cost": 150.00,
-        "base_price": 320.00,
-    },
-]
+TEMPLATE_PATH = os.path.join("scripts", "motor_precos_template.xlsx")
 
-for prod in products:
-    ws = wb.create_sheet(title=prod["sku"])
-    # Cabeçalho
-    ws.append(["sku", "name", "cost_price", "competitor_price"])
 
-    # 300 linhas de preços por produto
-    for _ in range(300):
-        if random.random() < 0.95:
-            price = round(prod["base_price"] * (1 + random.uniform(-0.20, 0.20)), 2)
-        else:
-            price = round(prod["base_price"] * random.choice([0.1, 3.5]), 2)
+def create_template():
+    os.makedirs("scripts", exist_ok=True)
 
-        ws.append([prod["sku"], prod["name"], prod["cost"], price])
+    # 1. Aba 'Meus Produtos'
+    df_produtos = pd.DataFrame(
+        columns=["SKU", "Meus Produtos", "Custo Base", "Margem Mínima"]
+    )
 
-wb.save("tests/fixtures/precos_concorrentes.xlsx")
-print("Planilha 'tests/fixtures/precos_concorrentes.xlsx' gerada com sucesso!")
+    # Dados de exemplo opcionais
+    df_produtos.loc[0] = ["SKU001", "Produto Exemplo A", 50.00, 0.15]
+    df_produtos.loc[1] = ["SKU002", "Produto Exemplo B", 120.00, 0.20]
+
+    # 2. Aba 'Concorrentes'
+    df_concorrentes = pd.DataFrame(
+        columns=["SKU", "Concorrentes", "Preços Concorrentes", "Data da Coleta"]
+    )
+    df_concorrentes.loc[0] = ["SKU001", "Loja X", 75.90, "2026-09-26"]
+    df_concorrentes.loc[1] = ["SKU001", "Loja Y", 72.00, "2026-09-26"]
+
+    # 3. Aba 'Taxas de Marketplace'
+    df_marketplaces = pd.DataFrame(
+        columns=["Marketplace", "Taxa Mínima", "Outros Custos"]
+    )
+    df_marketplaces.loc[0] = ["Mercado Livre", 0.14, 5.00]
+    df_marketplaces.loc[1] = ["Shopee", 0.12, 3.00]
+
+    # Salva no arquivo .xlsx com as 3 abas
+    with pd.ExcelWriter(TEMPLATE_PATH, engine="openpyxl") as writer:
+        df_produtos.to_excel(writer, sheet_name="Meus Produtos", index=False)
+        df_concorrentes.to_excel(writer, sheet_name="Concorrentes", index=False)
+        df_marketplaces.to_excel(writer, sheet_name="Taxas de Marketplace", index=False)
+
+    print(f"Modelo atualizado gerado em: {TEMPLATE_PATH}")
+
+
+if __name__ == "__main__":
+    create_template()

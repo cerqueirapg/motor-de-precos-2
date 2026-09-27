@@ -2,19 +2,15 @@ import asyncio
 import io
 import os
 import zipfile
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Annotated
 
 import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from app.repositories.excel_repository import ExcelRepository
-from app.repositories.product_repository import ProductRepository
-from app.schemas.product import PricingRequest, ProductBase
-from app.services.calculator import PriceCalculatorService
-
-router = APIRouter(prefix="/api/v1/upload", tags=["Upload"])
+# Ajustado o prefixo para coincidir com as chamadas do frontend
+router = APIRouter(prefix="/api/upload", tags=["Upload"])
 
 TEMPLATE_PATH = os.path.join("scripts", "motor_precos_template.xlsx")
 
@@ -24,6 +20,7 @@ def _write_file(path: str, contents: bytes) -> None:
         f.write(contents)
 
 
+# Rota final: GET /api/upload/download-template
 @router.get("/download-template")
 def download_template():
     """Permite ao usuário baixar a planilha modelo .xlsx em 1 clique."""
@@ -40,6 +37,7 @@ def download_template():
     )
 
 
+# Rota final: POST /api/upload/excel
 @router.post("/excel")
 async def upload_excel(file: Annotated[UploadFile, File()]):
     """Recebe a planilha, valida as abas e retorna o relatório comparativo de preços."""
@@ -60,67 +58,99 @@ async def upload_excel(file: Annotated[UploadFile, File()]):
             detail=f"Erro ao ler o arquivo Excel: {e!s}",
         )
 
-    required_sheets = ["produtos", "concorrentes"]
+    # Atualização dentro da função upload_excel em upload.py:
+
+    # Validação das novas abas obrigatórias
+    required_sheets = ["Meus Produtos", "Concorrentes", "Taxas de Marketplace"]
     for sheet in required_sheets:
         if sheet not in xls.sheet_names:
             raise HTTPException(
                 status_code=400,
-                detail=f"Aba obrigatória ausente no arquivo: {sheet}",
+                detail=f"Aba obrigatória ausente no arquivo: '{sheet}'",
             )
 
     temp_file_path = "temp_uploaded_motor.xlsx"
     await asyncio.to_thread(_write_file, temp_file_path, contents)
 
     try:
-        excel_repo = ExcelRepository(file_path=temp_file_path)
-        product_repo = ProductRepository(excel_repo=excel_repo)
-        calculator = PriceCalculatorService()
+        # Leitura com os novos nomes de abas e colunas
+        df_produtos = pd.read_excel(temp_file_path, sheet_name="Meus Produtos")
+        df_concorrentes = pd.read_excel(temp_file_path, sheet_name="Concorrentes")
+        df_marketplaces = pd.read_excel(
+            temp_file_path, sheet_name="Taxas de Marketplace"
+        )
 
-        df_produtos = pd.read_excel(temp_file_path, sheet_name="produtos")
-        lista_skus = df_produtos["sku"].dropna().tolist()
+        # Normalização dos nomes de colunas (para minúsculo/sem espaços se necessário)
+        df_produtos.columns = df_produtos.columns.str.strip()
+        df_concorrentes.columns = df_concorrentes.columns.str.strip()
+        df_marketplaces.columns = df_marketplaces.columns.str.strip()
 
+        # Obter taxa e outros custos padrão do primeiro marketplace (ou aplicar fallback)
+        taxa_mkt = Decimal(0)
+        outros_custos_mkt = Decimal(0)
+
+        if not df_marketplaces.empty:
+            primeira_taxa = df_marketplaces.iloc[0]
+            try:
+                taxa_mkt = Decimal(str(primeira_taxa.get("Taxa Mínima", 0)))
+                outros_custos_mkt = Decimal(str(primeira_taxa.get("Outros Custos", 0)))
+            except (InvalidOperation, ValueError):
+                pass
+
+        # Evita duplicidade de processamento para o mesmo SKU
+        lista_skus = df_produtos["SKU"].dropna().unique().tolist()
         relatorio_comparativo = []
 
         for sku in lista_skus:
-            produto = product_repo.get_by_sku(sku)
-            if not produto:
-                continue
+            row_prod = df_produtos[df_produtos["SKU"] == sku].iloc[0]
+            nome_produto = row_prod.get("Meus Produtos", f"SKU {sku}")
 
-            precos_concorrentes = excel_repo.get_competitor_prices(sku)
-            produto_base = ProductBase.model_validate(produto, from_attributes=True)
+            try:
+                custo_base = Decimal(str(row_prod.get("Custo Base", 0)))
+                margem_minima = Decimal(str(row_prod.get("Margem Mínima", 0)))
+            except (InvalidOperation, ValueError):
+                custo_base = Decimal(0)
+                margem_minima = Decimal(0)
 
-            request_data = PricingRequest(
-                product=produto_base,
-                min_margin=Decimal(str(produto.min_margin)),
-                desired_margin=Decimal(str(produto.min_margin)),
-                competitor_prices=[Decimal(str(p)) for p in precos_concorrentes],
+            # Tratamento seguro de preços dos concorrentes. Filtra preços dos concorrentes para o SKU atual
+            precos_conc_series = df_concorrentes[df_concorrentes["SKU"] == sku][
+                "Preços Concorrentes"
+            ].dropna()
+
+            precos_conc_decimal = []
+            for p in precos_conc_series:
+                try:
+                    precos_conc_decimal.append(Decimal(str(p)))
+                except (InvalidOperation, ValueError):
+                    continue
+
+            menor_conc = min(precos_conc_decimal) if precos_conc_decimal else None
+
+            # --- CÁLCULO DE PREÇO COM TAXAS DE MARKETPLACE ---
+            # Preço base sem taxas
+            custo_com_margem = (
+                custo_base * (Decimal(1) + margem_minima) + outros_custos_mkt
             )
 
-            resultado = calculator.calculate_price(request=request_data)
+            # Fator divisor para cobrir a comissão percentual sobre a venda
+            divisor = (
+                Decimal(1) - taxa_mkt if taxa_mkt < Decimal(1) else Decimal("0.86")
+            )
 
-            # Captura com fallback genérico
             preco_sugerido = (
-                getattr(resultado, "recommended_price", None)
-                or getattr(resultado, "suggested_price", None)
-                or getattr(resultado, "calculated_price", None)
-                or getattr(resultado, "final_price", None)
-                or getattr(resultado, "price", None)
+                custo_com_margem / divisor if divisor > 0 else custo_com_margem
             )
-
-            menor_conc = min(precos_concorrentes) if precos_concorrentes else None
 
             relatorio_comparativo.append(
                 {
-                    "sku": sku,
-                    "nome": produto.name,
-                    "custo_base": float(produto.cost_price),
+                    "sku": str(sku),
+                    "nome": str(nome_produto),
+                    "custo_base": float(custo_base),
                     "menor_concorrente": float(menor_conc)
                     if menor_conc is not None
                     else None,
-                    "preco_sugerido": float(preco_sugerido)
-                    if preco_sugerido is not None
-                    else None,
-                    "margem_minima": float(produto.min_margin),
+                    "preco_sugerido": float(round(preco_sugerido, 2)),
+                    "margem_minima": float(margem_minima),
                 }
             )
 
