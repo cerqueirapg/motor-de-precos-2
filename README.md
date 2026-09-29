@@ -25,6 +25,11 @@ O **Motor de Preços 2.0** foi construído utilizando **FastAPI** e uma arquitet
 
 ---
 
+## 🌐 Frontend
+A interface web para testes interativos e manipulação de uploads fica localizada no diretório frontend/. Ela comunica-se diretamente com os endpoints da API para enviar planilhas Excel e visualizar cálculos de preços em tempo real.
+
+---
+
 ## 📂 Estrutura do Projeto
 
 ```text
@@ -99,11 +104,11 @@ pip install -r requirements.txt
 ## 🚀 Executando a Aplicação
 Você pode inicializar o servidor de duas maneiras:
 
-Opção 1: Via script de execução rápido
+* Opção 1: Via script de execução rápido
 ```Bash
 python run_engine.py
 ```
-Opção 2: Via Uvicorn diretamente
+* Opção 2: Via Uvicorn diretamente
 ```Bash
 uvicorn app.main:app --reload
 ```
@@ -119,22 +124,18 @@ ReDoc: http://127.0.0.1:8000/redoc
 ## 🧪 Executando os Testes
 O projeto possui cobertura de testes unitários e de integração utilizando pytest.
 
-Executar todos os testes:
+* Executar todos os testes:
 
 ```Bash
 pytest
 ```
-Executar apenas testes unitários:
+* Executar apenas testes unitários:
 
 ```Bash
 pytest tests/unit
 ```
-Executar apenas testes de integração:
+* Executar apenas testes de integração:
 
 ```Bash
 pytest tests/integration
 ```
----
-
-## 🌐 Frontend
-A interface web para testes interativos e manipulação de uploads fica localizada no diretório frontend/. Ela comunica-se diretamente com os endpoints da API para enviar planilhas Excel e visualizar cálculos de preços em tempo real.
